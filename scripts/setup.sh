@@ -40,7 +40,6 @@ chown student:student /home/student/gradebook
 
 
 
-echo "=== 4. Налаштування MariaDB ==="
 systemctl start mariadb
 systemctl enable mariadb
 
@@ -112,4 +111,4 @@ if id "ubuntu" &>/dev/null; then
     usermod -L -e 1 ubuntu
 fi
 
-echo "=== Deployment has been finished"
+echo "Deployment has been finished"
