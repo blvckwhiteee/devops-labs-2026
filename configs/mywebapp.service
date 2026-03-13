@@ -1,0 +1,12 @@
+[Unit]
+Description=My Web App (Notes Service)
+After=network.target mariadb.service
+Requires=mariadb.service mywebapp.socket
+
+[Service]
+Type=simple
+User=app
+Group=app
+Restart=on-failure
+ExecStartPre=/usr/local/bin/mywebapp-migrate -db="user:password@tcp(127.0.0.1:3306)/mywebapp_db?parseTime=true"
+ExecStart=/usr/local/bin/mywebapp-server -port=3000 -db="user:password@tcp(127.0.0.1:3306)/mywebapp_db?parseTime=true"

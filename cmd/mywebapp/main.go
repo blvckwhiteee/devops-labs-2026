@@ -4,10 +4,10 @@ import (
 	"database/sql"
 	"flag"
 	"fmt"
-	"lab1/internal/domain"
 	"log"
 	"net"
 	"net/http"
+	"time"
 
 	"github.com/coreos/go-systemd/v22/activation"
 	"github.com/go-chi/chi/v5"
@@ -15,6 +15,7 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 
 	delivery "lab1/internal/delivery/http"
+	"lab1/internal/domain"
 	"lab1/internal/repository"
 	"lab1/internal/usecase"
 )
@@ -36,6 +37,22 @@ func main() {
 		if err != nil {
 			log.Fatalf("Failed to open database: %v", err)
 		}
+
+		var pingErr error
+		for i := 0; i < 10; i++ {
+			pingErr = db.Ping()
+			if pingErr == nil {
+				log.Println("Successfully connected to the database!")
+				break
+			}
+			log.Printf("Database is not ready yet, retrying in 2 seconds... (%d/10) Error: %v", i+1, pingErr)
+			time.Sleep(2 * time.Second)
+		}
+
+		if pingErr != nil {
+			log.Fatalf("Failed to connect to database after retries: %v", pingErr)
+		}
+
 		defer db.Close()
 		repo = repository.NewMariaDBRepository(db)
 	}

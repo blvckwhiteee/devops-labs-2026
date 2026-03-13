@@ -35,14 +35,7 @@ chown student:student /home/student/gradebook
 systemctl start mariadb
 systemctl enable mariadb
 
-mysql <<EOF
-CREATE DATABASE IF NOT EXISTS mywebapp_db;
-CREATE USER IF NOT EXISTS 'appuser'@'127.0.0.1' IDENTIFIED BY 'secret';
-CREATE USER IF NOT EXISTS 'appuser'@'localhost' IDENTIFIED BY 'secret';
-GRANT ALL PRIVILEGES ON mywebapp_db.* TO 'appuser'@'127.0.0.1';
-GRANT ALL PRIVILEGES ON mywebapp_db.* TO 'appuser'@'localhost';
-FLUSH PRIVILEGES;
-EOF
+mysql < scripts/init_db.sql
 
 go build -o /usr/local/bin/mywebapp-migrate ./cmd/migrate
 go build -o /usr/local/bin/mywebapp-server ./cmd/mywebapp
@@ -50,58 +43,16 @@ go build -o /usr/local/bin/mywebapp-server ./cmd/mywebapp
 chown mywebapp:mywebapp /usr/local/bin/mywebapp-migrate /usr/local/bin/mywebapp-server
 chmod 755 /usr/local/bin/mywebapp-migrate /usr/local/bin/mywebapp-server
 
-DB_DSN="appuser:secret@tcp(127.0.0.1:3306)/mywebapp_db?parseTime=true"
+DB_DSN="user:password@tcp(127.0.0.1:3306)/mywebapp_db?parseTime=true"
 
-cat <<EOF > /etc/systemd/system/mywebapp.socket
-[Unit]
-Description=My Web App Socket
-
-[Socket]
-ListenStream=127.0.0.1:3000
-
-[Install]
-WantedBy=sockets.target
-EOF
-
-cat <<EOF > /etc/systemd/system/mywebapp.service
-[Unit]
-Description=My Web App (Notes Service)
-After=network.target mariadb.service
-Requires=mariadb.service mywebapp.socket
-
-[Service]
-Type=simple
-User=mywebapp
-Group=mywebapp
-Restart=on-failure
-ExecStartPre=/usr/local/bin/mywebapp-migrate -db="${DB_DSN}"
-ExecStart=/usr/local/bin/mywebapp-server -port=3000 -db="${DB_DSN}"
-EOF
+cp configs/mywebapp.socket /etc/systemd/system/
+cp configs/mywebapp.service /etc/systemd/system/
 
 systemctl daemon-reload
 systemctl enable mywebapp.socket
 systemctl start mywebapp.socket
 
-cat <<EOF > /etc/nginx/sites-available/mywebapp
-
-server {
-    listen 80;
-    server_name _;
-
-    access_log /var/log/nginx/mywebapp_access.log;
-    error_log /var/log/nginx/mywebapp_error.log;
-
-    location /health {
-        return 404;
-    }
-
-    location / {
-        proxy_pass http://127.0.0.1:3000;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-    }
-}
-EOF
+cp configs/nginx.conf /etc/nginx/sites-available/mywebapp
 
 ln -sf /etc/nginx/sites-available/mywebapp /etc/nginx/sites-enabled/
 rm -f /etc/nginx/sites-enabled/default
