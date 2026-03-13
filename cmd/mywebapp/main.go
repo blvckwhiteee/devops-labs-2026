@@ -4,15 +4,17 @@ import (
 	"database/sql"
 	"flag"
 	"fmt"
+	"lab1/internal/domain"
 	"log"
+	"net"
 	"net/http"
 
+	"github.com/coreos/go-systemd/v22/activation"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	_ "github.com/go-sql-driver/mysql" // Додали драйвер сюди
+	_ "github.com/go-sql-driver/mysql"
 
 	delivery "lab1/internal/delivery/http"
-	"lab1/internal/domain"
 	"lab1/internal/repository"
 	"lab1/internal/usecase"
 )
@@ -24,7 +26,6 @@ func main() {
 
 	log.Printf("Starting mywebapp with DB: %s", *dbDSN)
 
-	// Вибір репозиторію
 	var repo domain.NoteRepository
 	if *dbDSN == "dummy-memory-dsn" {
 		log.Println("Using In-Memory Database")
@@ -39,7 +40,6 @@ func main() {
 		repo = repository.NewMariaDBRepository(db)
 	}
 
-	// Dependency Injection
 	noteUsecase := usecase.NewNoteUsecase(repo)
 	handler := delivery.NewHandler(noteUsecase, repo)
 
@@ -49,10 +49,25 @@ func main() {
 
 	handler.InitRoutes(r)
 
-	addr := fmt.Sprintf(":%s", *port)
-	log.Printf("Listening on %s...", addr)
+	listeners, err := activation.Listeners()
+	if err != nil {
+		log.Fatalf("Failed to get systemd listeners: %v", err)
+	}
 
-	if err := http.ListenAndServe(addr, r); err != nil {
+	var listener net.Listener
+	if len(listeners) > 0 {
+		log.Println("Using Systemd Socket Activation")
+		listener = listeners[0]
+	} else {
+		addr := fmt.Sprintf("127.0.0.1:%s", *port)
+		log.Printf("Listening on %s (manual fallback)...", addr)
+		listener, err = net.Listen("tcp", addr)
+		if err != nil {
+			log.Fatalf("Failed to listen: %v", err)
+		}
+	}
+
+	if err := http.Serve(listener, r); err != nil {
 		log.Fatalf("Server stopped: %v", err)
 	}
 }
