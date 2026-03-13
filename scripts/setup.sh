@@ -14,21 +14,22 @@ fi
 # teacher (sudo, зміна пароля при першому вході)
 if ! id "teacher" &>/dev/null; then
     useradd -m -s /bin/bash -G sudo teacher
-    echo "teacher:12345678" | chpasswd
+    
+    usermod --password $(openssl passwd -6 12345678) teacher
     chage -d 0 teacher
 fi
 
-# app (системний, без права входу)
+# Користувач app (системний, без права входу)
 if ! id "app" &>/dev/null; then
     useradd -r -s /bin/false app
 fi
 
-# operator (обмежений sudo)
+# Користувач operator (обмежений sudo)
 if ! id "operator" &>/dev/null; then
-    useradd -m -s /bin/bash operator
-    echo "operator:12345678" | chpasswd
+    useradd -m -s /bin/bash -g operator operator
+    usermod --password $(openssl passwd -6 12345678) operator
     chage -d 0 operator
-
+    
     cat <<EOF > /etc/sudoers.d/operator
 operator ALL=(ALL) NOPASSWD: /bin/systemctl start mywebapp.service, /bin/systemctl stop mywebapp.service, /bin/systemctl restart mywebapp.service, /bin/systemctl status mywebapp.service, /bin/systemctl reload nginx
 EOF
@@ -39,13 +40,18 @@ chown student:student /home/student/gradebook
 
 
 
+echo "=== 4. Налаштування MariaDB ==="
 systemctl start mariadb
 systemctl enable mariadb
 
-mysql -e "CREATE DATABASE IF NOT EXISTS mywebapp_db;"
-mysql -e "CREATE USER IF NOT EXISTS 'user'@'127.0.0.1' IDENTIFIED BY 'password';"
-mysql -e "GRANT ALL PRIVILEGES ON mywebapp_db.* TO 'appuser'@'127.0.0.1';"
-mysql -e "FLUSH PRIVILEGES;"
+mysql <<EOF
+CREATE DATABASE IF NOT EXISTS mywebapp_db;
+CREATE USER IF NOT EXISTS 'appuser'@'127.0.0.1' IDENTIFIED BY 'secret';
+CREATE USER IF NOT EXISTS 'appuser'@'localhost' IDENTIFIED BY 'secret';
+GRANT ALL PRIVILEGES ON mywebapp_db.* TO 'appuser'@'127.0.0.1';
+GRANT ALL PRIVILEGES ON mywebapp_db.* TO 'appuser'@'localhost';
+FLUSH PRIVILEGES;
+EOF
 
 go build -o /usr/local/bin/mywebapp-migrate ./cmd/migrate
 go build -o /usr/local/bin/mywebapp-server ./cmd/mywebapp
