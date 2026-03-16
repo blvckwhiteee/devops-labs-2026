@@ -15,8 +15,8 @@ if ! id "teacher" &>/dev/null; then
     chage -d 0 teacher
 fi
 
-if ! id "mywebapp" &>/dev/null; then
-    useradd -r -s /bin/false mywebapp
+if ! id "app" &>/dev/null; then
+    useradd -r -s /bin/false app
 fi
 
 if ! id "operator" &>/dev/null; then
@@ -34,16 +34,13 @@ chown student:student /home/student/gradebook
 
 systemctl start mariadb
 systemctl enable mariadb
-
 mysql < scripts/init_db.sql
 
 go build -o /usr/local/bin/mywebapp-migrate ./cmd/migrate
 go build -o /usr/local/bin/mywebapp-server ./cmd/mywebapp
 
-chown mywebapp:mywebapp /usr/local/bin/mywebapp-migrate /usr/local/bin/mywebapp-server
+chown app:app /usr/local/bin/mywebapp-migrate /usr/local/bin/mywebapp-server
 chmod 755 /usr/local/bin/mywebapp-migrate /usr/local/bin/mywebapp-server
-
-DB_DSN="user:password@tcp(127.0.0.1:3306)/mywebapp_db?parseTime=true"
 
 cp configs/mywebapp.socket /etc/systemd/system/
 cp configs/mywebapp.service /etc/systemd/system/
@@ -65,4 +62,4 @@ if id "ubuntu" &>/dev/null; then
     echo "Користувач ubuntu заблокований."
 fi
 
-echo "Deployment has been finished!"
+echo "Deployment has been finished"

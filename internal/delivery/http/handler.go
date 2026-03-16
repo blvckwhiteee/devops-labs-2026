@@ -12,6 +12,10 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
+type CreateNoteResponse struct {
+	ID int `json:"id"`
+}
+
 type CreateNoteDTO struct {
 	Title   string `json:"title"`
 	Content string `json:"content"`
@@ -66,7 +70,7 @@ func (h *Handler) getNotes(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	h.respond(w, r, notes, formatNotesHTML(notes))
+	h.getRespond(w, r, notes, formatNotesHTML(notes))
 }
 
 func (h *Handler) createNote(w http.ResponseWriter, r *http.Request) {
@@ -92,10 +96,11 @@ func (h *Handler) createNote(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-
+	response := CreateNoteResponse{
+		ID: note.ID,
+	}
 	w.WriteHeader(http.StatusCreated)
-	html := fmt.Sprintf(`<html><body><p>Note created with ID: %d</p></body></html>`, note.ID)
-	h.respond(w, r, note, html)
+	h.postRespond(w, response)
 }
 
 func (h *Handler) getNoteByID(w http.ResponseWriter, r *http.Request) {
@@ -114,10 +119,10 @@ func (h *Handler) getNoteByID(w http.ResponseWriter, r *http.Request) {
 	}
 
 	html := fmt.Sprintf(`<html><body><h1>%s</h1><p>ID: %d</p><p>%s</p></body></html>`, note.Title, note.ID, note.Content)
-	h.respond(w, r, note, html)
+	h.getRespond(w, r, note, html)
 }
 
-func (h *Handler) respond(w http.ResponseWriter, r *http.Request, data interface{}, html string) {
+func (h *Handler) getRespond(w http.ResponseWriter, r *http.Request, data interface{}, html string) {
 	if strings.Contains(r.Header.Get("Accept"), "text/html") {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.Write([]byte(html))
@@ -125,6 +130,14 @@ func (h *Handler) respond(w http.ResponseWriter, r *http.Request, data interface
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(data)
+}
+
+func (h *Handler) postRespond(w http.ResponseWriter, data interface{}) {
+	err := json.NewEncoder(w).Encode(data)
+	if err != nil {
+		return
+	}
+
 }
 
 func formatNotesHTML(notes []domain.Note) string {

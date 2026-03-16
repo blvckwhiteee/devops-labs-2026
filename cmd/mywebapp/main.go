@@ -46,7 +46,7 @@ func main() {
 				break
 			}
 			log.Printf("Database is not ready yet, retrying in 2 seconds... (%d/10) Error: %v", i+1, pingErr)
-			time.Sleep(2 * time.Second)
+			time.Sleep(5 * time.Second)
 		}
 
 		if pingErr != nil {
