@@ -21,6 +21,7 @@ import (
 )
 
 func main() {
+	host := flag.String("host", "127.0.0.1", "Host interface to bind the application to")
 	port := flag.String("port", "3000", "Port to run the application on")
 	dbDSN := flag.String("db", "dummy-memory-dsn", "Database connection string")
 	flag.Parse()
@@ -76,7 +77,7 @@ func main() {
 		log.Println("Using Systemd Socket Activation")
 		listener = listeners[0]
 	} else {
-		addr := fmt.Sprintf("127.0.0.1:%s", *port)
+		addr := fmt.Sprintf("%s:%s", *host, *port)
 		log.Printf("Listening on %s (manual fallback)...", addr)
 		listener, err = net.Listen("tcp", addr)
 		if err != nil {

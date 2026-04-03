@@ -1,0 +1,10 @@
+.git
+.idea
+docs
+lab2
+configs
+scripts
+README.md
+*.md
+tmp
+*.log

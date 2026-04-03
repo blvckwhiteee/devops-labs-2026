@@ -16,6 +16,11 @@ type CreateNoteResponse struct {
 	ID int `json:"id"`
 }
 
+type NoteListItemResponse struct {
+	ID    int    `json:"id"`
+	Title string `json:"title"`
+}
+
 type CreateNoteDTO struct {
 	Title   string `json:"title"`
 	Content string `json:"content"`
@@ -70,7 +75,14 @@ func (h *Handler) getNotes(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	h.getRespond(w, r, notes, formatNotesHTML(notes))
+	items := make([]NoteListItemResponse, 0, len(notes))
+	for _, n := range notes {
+		items = append(items, NoteListItemResponse{
+			ID:    n.ID,
+			Title: n.Title,
+		})
+	}
+	h.getRespond(w, r, items, formatNotesHTML(notes))
 }
 
 func (h *Handler) createNote(w http.ResponseWriter, r *http.Request) {
