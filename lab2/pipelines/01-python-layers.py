@@ -175,6 +175,7 @@ def main() -> int:
         return 1
 
     print("Python Layers Experiment")
+    print(f"Initial build cache mode: {'disabled (--no-cache)' if args.no_cache else 'enabled (warm cache possible)'}")
     for result in results:
         print(f"\nDockerfile: {result['dockerfile']}")
         print(f"  Initial build time: {result['initial_build_time_seconds']:.2f} s")
