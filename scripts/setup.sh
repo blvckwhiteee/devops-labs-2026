@@ -11,7 +11,7 @@ fi
 
 if ! id "teacher" &>/dev/null; then
     useradd -m -s /bin/bash -G sudo teacher
-    usermod --password $(openssl passwd -6 12345678) teacher
+    usermod --password "$(openssl passwd -6 12345678)" teacher
     chage -d 0 teacher
 fi
 
@@ -21,7 +21,7 @@ fi
 
 if ! id "operator" &>/dev/null; then
     useradd -m -s /bin/bash -g operator operator
-    usermod --password $(openssl passwd -6 12345678) operator
+    usermod --password "$(openssl passwd -6 12345678)" operator
     chage -d 0 operator
 
     cat <<EOF > /etc/sudoers.d/operator

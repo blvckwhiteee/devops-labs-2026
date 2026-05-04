@@ -1,0 +1,2 @@
+# Default shell for scripts without a shebang
+shell=bash

@@ -50,9 +50,9 @@ func (h *Handler) InitRoutes(r chi.Router) {
 	})
 }
 
-func (h *Handler) aliveHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) aliveHandler(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("OK"))
+	_, _ = w.Write([]byte("OK"))
 }
 
 func (h *Handler) readyHandler(w http.ResponseWriter, r *http.Request) {
@@ -61,12 +61,12 @@ func (h *Handler) readyHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("OK"))
+	_, _ = w.Write([]byte("OK"))
 }
 
-func (h *Handler) rootHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) rootHandler(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Write([]byte(`<html><body><h1>Notes API</h1><ul><li><a href="/notes">GET /notes</a></li><li>POST /notes</li><li>GET /notes/&lt;id&gt;</li></ul></body></html>`))
+	_, _ = w.Write([]byte(`<html><body><h1>Notes API</h1><ul><li><a href="/notes">GET /notes</a></li><li>POST /notes</li><li>GET /notes/&lt;id&gt;</li></ul></body></html>`))
 }
 
 func (h *Handler) getNotes(w http.ResponseWriter, r *http.Request) {
@@ -137,11 +137,11 @@ func (h *Handler) getNoteByID(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) getRespond(w http.ResponseWriter, r *http.Request, data interface{}, html string) {
 	if strings.Contains(r.Header.Get("Accept"), "text/html") {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		w.Write([]byte(html))
+		_, _ = w.Write([]byte(html))
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(data)
+	_ = json.NewEncoder(w).Encode(data)
 }
 
 func (h *Handler) postRespond(w http.ResponseWriter, data interface{}) {

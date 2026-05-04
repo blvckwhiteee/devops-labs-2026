@@ -13,7 +13,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o /out/mywebapp-migrate ./cmd/migrate
 
 FROM busybox:1.37.0-uclibc AS busybox
 
-FROM gcr.io/distroless/static-debian12
+FROM gcr.io/distroless/static-debian12:nonroot
 
 WORKDIR /app
 
