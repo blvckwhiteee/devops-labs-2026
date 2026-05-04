@@ -31,7 +31,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: hadolint/hadolint-action@v2.14.0
+      - run: docker run --rm -i hadolint/hadolint < Dockerfile
         with:
           dockerfile: Dockerfile
 
