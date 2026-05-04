@@ -37,7 +37,9 @@ func seedNote(t *testing.T, r *chi.Mux, title, content string) int {
 		t.Fatalf("seedNote: expected 201, got %d: %s", w.Code, w.Body.String())
 	}
 	var resp map[string]int
-	json.NewDecoder(w.Body).Decode(&resp)
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+		t.Fatalf("seedNote: failed to decode response: %v", err)
+	}
 	return resp["id"]
 }
 
@@ -137,7 +139,9 @@ func TestGetNotes_WithData(t *testing.T) {
 	r.ServeHTTP(w, req)
 
 	var items []map[string]interface{}
-	json.NewDecoder(w.Body).Decode(&items)
+	if err := json.NewDecoder(w.Body).Decode(&items); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
 	if len(items) != 2 {
 		t.Errorf("expected 2 notes, got %d", len(items))
 	}
@@ -158,7 +162,9 @@ func TestCreateNote_JSON(t *testing.T) {
 		t.Errorf("expected 201, got %d: %s", w.Code, w.Body.String())
 	}
 	var resp map[string]int
-	json.NewDecoder(w.Body).Decode(&resp)
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
 	if resp["id"] == 0 {
 		t.Error("expected non-zero id in response")
 	}

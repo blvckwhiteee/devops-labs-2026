@@ -120,9 +120,15 @@ func TestGetNotes_Empty(t *testing.T) {
 
 func TestGetNotes(t *testing.T) {
 	uc := usecase.NewNoteUsecase(newMockRepo())
-	uc.CreateNote(context.Background(), "First", "")
-	uc.CreateNote(context.Background(), "Second", "")
-	uc.CreateNote(context.Background(), "Third", "")
+	if _, err := uc.CreateNote(context.Background(), "First", ""); err != nil {
+		t.Fatalf("setup: %v", err)
+	}
+	if _, err := uc.CreateNote(context.Background(), "Second", ""); err != nil {
+		t.Fatalf("setup: %v", err)
+	}
+	if _, err := uc.CreateNote(context.Background(), "Third", ""); err != nil {
+		t.Fatalf("setup: %v", err)
+	}
 
 	notes, err := uc.GetNotes(context.Background())
 
@@ -163,9 +169,13 @@ func TestGetNoteByID_NotFound(t *testing.T) {
 
 func TestGetNoteByID_CorrectNote(t *testing.T) {
 	uc := usecase.NewNoteUsecase(newMockRepo())
-	uc.CreateNote(context.Background(), "First", "")
+	if _, err := uc.CreateNote(context.Background(), "First", ""); err != nil {
+		t.Fatalf("setup: %v", err)
+	}
 	second, _ := uc.CreateNote(context.Background(), "Second", "specific")
-	uc.CreateNote(context.Background(), "Third", "")
+	if _, err := uc.CreateNote(context.Background(), "Third", ""); err != nil {
+		t.Fatalf("setup: %v", err)
+	}
 
 	got, err := uc.GetNoteByID(context.Background(), second.ID)
 

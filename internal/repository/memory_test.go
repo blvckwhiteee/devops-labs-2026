@@ -29,8 +29,12 @@ func TestMemoryRepository_Create_AutoIncrement(t *testing.T) {
 
 	n1 := &domain.Note{Title: "First"}
 	n2 := &domain.Note{Title: "Second"}
-	repo.Create(ctx, n1)
-	repo.Create(ctx, n2)
+	if err := repo.Create(ctx, n1); err != nil {
+		t.Fatalf("setup: %v", err)
+	}
+	if err := repo.Create(ctx, n2); err != nil {
+		t.Fatalf("setup: %v", err)
+	}
 
 	if n1.ID == n2.ID {
 		t.Error("expected distinct IDs for different notes")
@@ -56,9 +60,15 @@ func TestMemoryRepository_GetAll_Empty(t *testing.T) {
 func TestMemoryRepository_GetAll(t *testing.T) {
 	repo := repository.NewMemoryRepository()
 	ctx := context.Background()
-	repo.Create(ctx, &domain.Note{Title: "A"})
-	repo.Create(ctx, &domain.Note{Title: "B"})
-	repo.Create(ctx, &domain.Note{Title: "C"})
+	if err := repo.Create(ctx, &domain.Note{Title: "A"}); err != nil {
+		t.Fatalf("setup: %v", err)
+	}
+	if err := repo.Create(ctx, &domain.Note{Title: "B"}); err != nil {
+		t.Fatalf("setup: %v", err)
+	}
+	if err := repo.Create(ctx, &domain.Note{Title: "C"}); err != nil {
+		t.Fatalf("setup: %v", err)
+	}
 
 	notes, err := repo.GetAll(ctx)
 
@@ -73,7 +83,9 @@ func TestMemoryRepository_GetAll(t *testing.T) {
 func TestMemoryRepository_GetAll_IsolatesCopy(t *testing.T) {
 	repo := repository.NewMemoryRepository()
 	ctx := context.Background()
-	repo.Create(ctx, &domain.Note{Title: "Original"})
+	if err := repo.Create(ctx, &domain.Note{Title: "Original"}); err != nil {
+		t.Fatalf("setup: %v", err)
+	}
 
 	notes, _ := repo.GetAll(ctx)
 	notes[0].Title = "Mutated"
@@ -88,7 +100,9 @@ func TestMemoryRepository_GetByID(t *testing.T) {
 	repo := repository.NewMemoryRepository()
 	ctx := context.Background()
 	original := &domain.Note{Title: "Hello", Content: "World"}
-	repo.Create(ctx, original)
+	if err := repo.Create(ctx, original); err != nil {
+		t.Fatalf("setup: %v", err)
+	}
 
 	got, err := repo.GetByID(ctx, original.ID)
 
@@ -117,7 +131,9 @@ func TestMemoryRepository_GetByID_IsolatesCopy(t *testing.T) {
 	repo := repository.NewMemoryRepository()
 	ctx := context.Background()
 	original := &domain.Note{Title: "Original"}
-	repo.Create(ctx, original)
+	if err := repo.Create(ctx, original); err != nil {
+		t.Fatalf("setup: %v", err)
+	}
 
 	got, _ := repo.GetByID(ctx, original.ID)
 	got.Title = "Mutated"
@@ -146,7 +162,10 @@ func TestMemoryRepository_Concurrent(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			repo.Create(ctx, &domain.Note{Title: "concurrent"})
+			if err := repo.Create(ctx, &domain.Note{Title: "concurrent"}); err != nil {
+				t.Errorf("unexpected error during concurrent Create: %v", err)
+				return
+			}
 		}()
 	}
 	wg.Wait()
