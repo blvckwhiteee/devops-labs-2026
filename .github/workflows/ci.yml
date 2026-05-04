@@ -18,21 +18,21 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
-          cache: false
+          cache: true
 
       - uses: golangci/golangci-lint-action@v6
         with:
-          version: latest
+          version: v1.64.8
 
   hadolint:
     name: Dockerfile Lint
-    run: docker run --rm -i hadolint/hadolint < Dockerfile
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
-        with:
-          dockerfile: Dockerfile
+
+      - name: Run Hadolint
+        run: docker run --rm -i hadolint/hadolint < Dockerfile
 
   shellcheck:
     name: Shell Script Lint
@@ -41,7 +41,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: ludeeus/action-shellcheck@master
+      - uses: ludeeus/action-shellcheck@v2
         with:
           scandir: './scripts'
 
@@ -72,13 +72,14 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
+          cache: true
 
       - name: Run tests with coverage
         run: go test -coverprofile=coverage.out -covermode=atomic ./...
 
       - name: Check coverage threshold (≥40%)
         run: |
-          COVERAGE=$(go tool cover -func=coverage.out | grep '^total:' | awk '{print $NF}' | tr -d '%')
+          COVERAGE=$(go tool cover -func=coverage.out | awk '/total:/ {print $3}' | tr -d '%')
           echo "Total coverage: ${COVERAGE}%"
           awk -v c="$COVERAGE" 'BEGIN {
             if (c + 0 < 40) {
