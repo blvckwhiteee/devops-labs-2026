@@ -32,7 +32,6 @@ jobs:
         id: tag
         run: |
           TAG=$(git describe --exact-match --tags $(git rev-parse HEAD) 2>/dev/null || echo "")
-          
           if [ -z "$TAG" ]; then
             echo "tag_found=false" >> "$GITHUB_OUTPUT"
             echo "::notice::No tag found for this commit. Skipping deploy."
