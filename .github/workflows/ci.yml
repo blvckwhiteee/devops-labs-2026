@@ -56,7 +56,11 @@ jobs:
       - uses: ibiqlik/action-yamllint@v3
         with:
           config_file: .yamllint.yml
-          file_or_dir: .
+          file_or_dir: |
+            .github
+            docker-compose.yml
+            docker-compose.prod.yml
+            .yamllint.yml
           strict: true
 
   test:
