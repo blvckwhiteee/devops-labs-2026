@@ -1,0 +1,63 @@
+services:
+  db:
+    image: mariadb:11.8
+    environment:
+      MYSQL_DATABASE: ${DB_NAME:-mywebapp_db}
+      MYSQL_USER: ${DB_USER:-user}
+      MYSQL_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?DB_ROOT_PASSWORD is required}
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mariadb-admin ping -h 127.0.0.1 -uroot -p$${MYSQL_ROOT_PASSWORD} --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    networks:
+      - mywebapp_net
+    restart: unless-stopped
+
+  migrate:
+    image: ${APP_IMAGE:?APP_IMAGE is required}
+    entrypoint: ["/app/mywebapp-migrate"]
+    command:
+      - -db=${DB_USER:-user}:${DB_PASSWORD}@tcp(db:3306)/${DB_NAME:-mywebapp_db}?parseTime=true
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - mywebapp_net
+    restart: "no"
+
+  web:
+    image: ${APP_IMAGE:?APP_IMAGE is required}
+    entrypoint: ["/app/mywebapp-server"]
+    command:
+      - -host=0.0.0.0
+      - -port=3000
+      - -db=${DB_USER:-user}:${DB_PASSWORD}@tcp(db:3306)/${DB_NAME:-mywebapp_db}?parseTime=true
+    # Port bound only to localhost — nginx on the host proxies to it
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "/bin/wget", "-qO-", "http://127.0.0.1:3000/health/ready"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - mywebapp_net
+    restart: unless-stopped
+
+volumes:
+  mariadb_data:
+
+networks:
+  mywebapp_net:
+    driver: bridge

@@ -1,0 +1,93 @@
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: [Build]
+    types: [completed]
+
+jobs:
+  deploy:
+    name: Deploy to Target Node
+    runs-on: [self-hosted, target-deployer]
+    # Trigger only when Build succeeded on a push to a v*.*.* ref (annotated tag check is done at runtime)
+    if: |
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      startsWith(github.event.workflow_run.head_branch, 'v')
+    timeout-minutes: 15
+
+    env:
+      TARGET_HOST: ${{ secrets.TARGET_HOST }}
+      TARGET_USER: ${{ secrets.TARGET_USER }}
+      SSH_KEY_PATH: ${{ runner.temp }}/deploy_key
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+          fetch-tags: true
+
+      # Annotated tag → object type 'tag'. Lightweight tag → object type 'commit'.
+      # Only annotated tags get a full deploy (task requirement).
+      - name: Verify annotated tag
+        id: tag-check
+        env:
+          TAG: ${{ github.event.workflow_run.head_branch }}
+        run: |
+          OBJ_TYPE=$(git cat-file -t "$TAG" 2>/dev/null || echo "unknown")
+          echo "==> Tag '${TAG}' object type: ${OBJ_TYPE}"
+          if [[ "$OBJ_TYPE" == "tag" ]]; then
+            echo "annotated=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "annotated=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::${TAG} is not an annotated tag — skipping deploy."
+          fi
+
+      - name: Setup SSH key
+        if: steps.tag-check.outputs.annotated == 'true'
+        run: |
+          install -m 600 /dev/null "$SSH_KEY_PATH"
+          printf '%s\n' "${{ secrets.TARGET_SSH_KEY }}" > "$SSH_KEY_PATH"
+
+      - name: Compute image reference
+        if: steps.tag-check.outputs.annotated == 'true'
+        id: image
+        env:
+          REPO: ${{ github.repository }}
+          TAG: ${{ github.event.workflow_run.head_branch }}
+        run: |
+          echo "ref=ghcr.io/$(echo "$REPO" | tr '[:upper:]' '[:lower:]'):${TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy
+        if: steps.tag-check.outputs.annotated == 'true'
+        env:
+          APP_IMAGE: ${{ steps.image.outputs.ref }}
+        run: bash scripts/deploy.sh
+
+      - name: Verify deployment
+        if: steps.tag-check.outputs.annotated == 'true'
+        run: bash scripts/verify.sh
+
+      # Optional: email notification on verification failure.
+      # To enable — add secrets: MAIL_SERVER, EMAIL_USERNAME, EMAIL_PASSWORD, EMAIL_TO.
+      # - name: Notify on failure
+      #   if: failure() && steps.tag-check.outputs.annotated == 'true'
+      #   uses: dawidd6/action-send-mail@v3
+      #   continue-on-error: true
+      #   with:
+      #     server_address: ${{ secrets.MAIL_SERVER }}
+      #     server_port: 465
+      #     secure: true
+      #     username: ${{ secrets.EMAIL_USERNAME }}
+      #     password: ${{ secrets.EMAIL_PASSWORD }}
+      #     subject: "[FAILED] Deploy ${{ github.event.workflow_run.head_branch }}"
+      #     body: |
+      #       Deployment of ${{ github.event.workflow_run.head_branch }} FAILED.
+      #       Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      #     to: ${{ secrets.EMAIL_TO }}
+      #     from: GitHub Actions <noreply@github.com>
+
+      - name: Cleanup SSH key
+        if: always()
+        run: rm -f "$SSH_KEY_PATH"
