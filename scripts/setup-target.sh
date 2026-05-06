@@ -43,6 +43,7 @@ if ! id "app" &>/dev/null; then
 fi
 
 if ! id "${DEPLOY_USER}" &>/dev/null; then
+    getent group "${DEPLOY_USER}" &>/dev/null && groupdel "${DEPLOY_USER}" || true
     useradd -m -s /bin/bash "${DEPLOY_USER}"
     usermod --password "$(openssl passwd -6 12345678)" "${DEPLOY_USER}"
 fi
