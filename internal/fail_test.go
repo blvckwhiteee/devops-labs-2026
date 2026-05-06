@@ -1,7 +1,7 @@
 package internal
 
-import "testing"
+// import "testing"
 
-func TestDemoFail(t *testing.T) {
-	t.Fatal("demo: intentional CI failure for lab report")
-}
+// func TestDemoFail(t *testing.T) {
+// 	t.Fatal("demo: intentional CI failure for lab report")
+// }
