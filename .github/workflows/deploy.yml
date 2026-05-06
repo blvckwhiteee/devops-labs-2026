@@ -25,11 +25,25 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
 
-      # Determine if this commit belongs to an annotated tag
+      # Determine if this commit belongs to an annotated tag.
+      # In a two-hop workflow_run chain (CI → Build → Deploy), head_sha resets
+      # to the default branch HEAD at each hop, so git describe on HEAD is
+      # unreliable. head_branch propagates the original tag name correctly.
       - name: Detect tag (if any)
         id: tag
+        env:
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
         run: |
-          TAG=$(git describe --exact-match --tags $(git rev-parse HEAD) 2>/dev/null || echo "")
+          TAG=""
+          # Primary: head_branch carries the tag name through workflow_run chain
+          if [[ "$HEAD_BRANCH" =~ ^v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+            TAG="$HEAD_BRANCH"
+          fi
+          # Fallback: git describe on the checked-out HEAD
+          if [ -z "$TAG" ]; then
+            TAG=$(git describe --exact-match --tags "$(git rev-parse HEAD)" 2>/dev/null || echo "")
+          fi
+
           if [ -z "$TAG" ]; then
             echo "tag_found=false" >> "$GITHUB_OUTPUT"
             echo "::notice::No tag found for this commit. Skipping deploy."
