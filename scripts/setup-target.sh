@@ -45,7 +45,6 @@ fi
 if ! id "${DEPLOY_USER}" &>/dev/null; then
     useradd -m -s /bin/bash "${DEPLOY_USER}"
     usermod --password "$(openssl passwd -6 12345678)" "${DEPLOY_USER}"
-    chage -d 0 "${DEPLOY_USER}"
 fi
 
 # operator gets access to Docker and restricted sudo for service management
@@ -107,7 +106,7 @@ cp "${REPO_ROOT}/configs/nginx.conf" /etc/nginx/sites-available/mywebapp
 ln -sf /etc/nginx/sites-available/mywebapp /etc/nginx/sites-enabled/mywebapp
 rm -f /etc/nginx/sites-enabled/default
 nginx -t
-systemctl enable nginx
+systemctl enable --now nginx
 systemctl reload nginx
 
 # ── systemd unit ──────────────────────────────────────────────────────────────
@@ -117,10 +116,11 @@ systemctl daemon-reload
 systemctl enable mywebapp-container.service
 
 # ── Disable ubuntu user ───────────────────────────────────────────────────────
-if id "ubuntu" &>/dev/null; then
-    usermod -L -e 1 ubuntu
-    echo "==> ubuntu user locked."
-fi
+# Only lock after confirming operator SSH access works.
+# Run manually: sudo usermod -L -e 1 ubuntu
+echo "INFO: ubuntu user NOT locked automatically."
+echo "      Verify operator SSH access works, then run:"
+echo "      sudo usermod -L -e 1 ubuntu"
 
 cat <<EOF
 
