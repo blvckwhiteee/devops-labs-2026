@@ -26,7 +26,7 @@ fail() { printf "[FAIL] %s\n" "$*" >&2; ERRORS=$((ERRORS + 1)); }
 check_http() {
     local desc="$1" url="$2" expected_code="$3"
     local actual_code
-    actual_code=$(curl -fsS -o /dev/null -w "%{http_code}" \
+    actual_code=$(curl -sS -o /dev/null -w "%{http_code}" \
         --max-time 10 --retry 3 --retry-delay 2 "${url}" 2>/dev/null || echo "000")
     if [[ "${actual_code}" == "${expected_code}" ]]; then
         pass "${desc}: HTTP ${actual_code}"
@@ -68,7 +68,7 @@ fi
 
 # web container is running
 if docker compose -f "${WEBAPP_DIR}/docker-compose.yml" ps web 2>/dev/null \
-        | grep -qi "running"; then
+        | grep -qi " up "; then
     pass "web container is running"
 else
     fail "web container is not running"
@@ -77,7 +77,7 @@ fi
 
 # db container is running
 if docker compose -f "${WEBAPP_DIR}/docker-compose.yml" ps db 2>/dev/null \
-        | grep -qi "running"; then
+        | grep -qi " up "; then
     pass "db container is running"
 else
     fail "db container is not running"
