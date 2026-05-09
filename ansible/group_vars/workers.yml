@@ -1,0 +1,9 @@
+---
+go_version:      "1.24.3"
+go_install_dir:  /usr/local/go
+go_archive_url:  "https://go.dev/dl/go{{ go_version }}.linux-amd64.tar.gz"
+go_archive_sum:  "3333"   
+
+app_src_dir:     /opt/mywebapp/src
+app_bin_server:  /usr/local/bin/mywebapp-server
+app_bin_migrate: /usr/local/bin/mywebapp-migrate
