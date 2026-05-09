@@ -1,0 +1,56 @@
+---
+- name: Update apt cache
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Install base packages
+  ansible.builtin.apt:
+    name:
+      - curl
+      - gnupg
+      - sudo
+      - python3
+      - python3-pymysql
+      - ufw
+    state: present
+
+- name: Create student user
+  ansible.builtin.user:
+    name: student
+    shell: /bin/bash
+    groups: sudo
+    append: true
+    state: present
+
+- name: Grant student passwordless sudo
+  ansible.builtin.copy:
+    dest: /etc/sudoers.d/student
+    content: "student ALL=(ALL) NOPASSWD:ALL\n"
+    mode: "0440"
+    validate: visudo -cf %s
+
+- name: Write gradebook file
+  ansible.builtin.copy:
+    dest: /home/student/gradebook
+    content: "{{ variant_n }}\n"
+    owner: student
+    group: student
+    mode: "0644"
+
+- name: Create teacher user
+  ansible.builtin.user:
+    name: teacher
+    shell: /bin/bash
+    groups: sudo
+    append: true
+    password: "{{ teacher_password | password_hash('sha512') }}"
+    state: present
+    update_password: on_create
+
+- name: Allow teacher sudo with password
+  ansible.builtin.copy:
+    dest: /etc/sudoers.d/teacher
+    content: "%sudo ALL=(ALL:ALL) ALL\n"
+    mode: "0440"
+    validate: visudo -cf %s

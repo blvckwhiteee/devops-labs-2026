@@ -1,0 +1,11 @@
+---
+- name: Configure db VM
+  hosts: db
+  become: true
+  vars_files:
+    - ../vault/secrets.yml
+
+  roles:
+    - common
+    - firewall
+    - mariadb

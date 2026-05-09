@@ -1,0 +1,119 @@
+---
+- name: Create system user app (runs the service)
+  ansible.builtin.user:
+    name: app
+    system: true
+    shell: /sbin/nologin
+    create_home: false
+    state: present
+
+- name: Create operator user
+  ansible.builtin.user:
+    name: operator
+    shell: /bin/bash
+    password: "{{ operator_password | password_hash('sha512') }}"
+    state: present
+    update_password: on_create
+
+- name: Configure operator sudo (restricted to service management only)
+  ansible.builtin.copy:
+    dest: /etc/sudoers.d/operator
+    content: |
+      operator ALL=(ALL) NOPASSWD: \
+          /bin/systemctl start {{ app_name }}.service, \
+          /bin/systemctl stop {{ app_name }}.service, \
+          /bin/systemctl restart {{ app_name }}.service, \
+          /bin/systemctl status {{ app_name }}.service, \
+          /bin/systemctl reload nginx.service
+    mode: "0440"
+    validate: visudo -cf %s
+
+# ── Source code ───────────────────────────────────────────────────────────────
+- name: Create application source directory
+  ansible.builtin.file:
+    path: "{{ app_src_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Synchronise application source code to VM
+  ansible.posix.synchronize:
+    src: "{{ playbook_dir }}/../"
+    dest: "{{ app_src_dir }}/"
+    rsync_opts:
+      - "--include=cmd/"
+      - "--include=cmd/**"
+      - "--include=internal/"
+      - "--include=internal/**"
+      - "--include=go.mod"
+      - "--include=go.sum"
+      - "--exclude=*"
+    delete: false
+  register: source_sync
+
+- name: Check if server binary exists
+  ansible.builtin.stat:
+    path: "{{ app_bin_server }}"
+  register: bin_server
+
+- name: Check if migrate binary exists
+  ansible.builtin.stat:
+    path: "{{ app_bin_migrate }}"
+  register: bin_migrate
+
+- name: Build mywebapp-server binary
+  ansible.builtin.command:
+    cmd: "{{ go_install_dir }}/bin/go build -o {{ app_bin_server }} ./cmd/mywebapp"
+    chdir: "{{ app_src_dir }}"
+  environment:
+    HOME: /root
+    GOPATH: /root/go
+    PATH: "{{ go_install_dir }}/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+  when: source_sync.changed or not bin_server.stat.exists
+  changed_when: true
+
+- name: Build mywebapp-migrate binary
+  ansible.builtin.command:
+    cmd: "{{ go_install_dir }}/bin/go build -o {{ app_bin_migrate }} ./cmd/migrate"
+    chdir: "{{ app_src_dir }}"
+  environment:
+    HOME: /root
+    GOPATH: /root/go
+    PATH: "{{ go_install_dir }}/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+  when: source_sync.changed or not bin_migrate.stat.exists
+  changed_when: true
+
+- name: Set ownership and permissions on binaries
+  ansible.builtin.file:
+    path: "{{ item }}"
+    owner: app
+    group: app
+    mode: "0755"
+  loop:
+    - "{{ app_bin_server }}"
+    - "{{ app_bin_migrate }}"
+
+- name: Deploy mywebapp systemd service unit
+  ansible.builtin.template:
+    src: mywebapp.service.j2
+    dest: /etc/systemd/system/{{ app_name }}.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify:
+    - Reload systemd
+    - Restart mywebapp
+
+- name: Enable and start mywebapp service
+  ansible.builtin.systemd:
+    name: "{{ app_name }}"
+    enabled: true
+    state: started
+    daemon_reload: true
+
+- name: Wait for app to be ready on 127.0.0.1:{{ app_port }}
+  ansible.builtin.wait_for:
+    host: 127.0.0.1
+    port: "{{ app_port }}"
+    timeout: 30

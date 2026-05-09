@@ -1,0 +1,6 @@
+---
+- name: Import db playbook
+  ansible.builtin.import_playbook: playbooks/db.yml
+
+- name: Import workers playbook
+  ansible.builtin.import_playbook: playbooks/workers.yml

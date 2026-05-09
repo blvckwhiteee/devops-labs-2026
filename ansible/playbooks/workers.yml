@@ -1,0 +1,13 @@
+---
+- name: Configure worker VM
+  hosts: workers
+  become: true
+  vars_files:
+    - ../vault/secrets.yml
+
+  roles:
+    - common
+    - firewall
+    - go_toolchain
+    - mywebapp
+    - nginx

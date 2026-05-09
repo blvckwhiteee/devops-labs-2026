@@ -1,0 +1,8 @@
+---
+
+app_port:    3000
+variant_n:   12
+
+db_name:     mywebapp_db
+db_user:     mywebapp
+db_port:     3306
